@@ -1,0 +1,13 @@
+
+{
+  "name": "MoneyFlow - วางแผนการเงิน",
+  "short_name": "MoneyFlow",
+  "description": "จัดการรายรับรายจ่าย เงินออม และงบประมาณ",
+  "start_url": "/moneyflow/",
+  "scope": "/moneyflow/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "lang": "th",
+  "icons": []
+}
