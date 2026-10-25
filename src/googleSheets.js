@@ -2,8 +2,8 @@
 // MoneyFlow Google Sheets API
 // เชื่อมข้อมูลผ่าน OAuth 2.0 โดยไม่เก็บรหัสผ่าน
 
-const CLIENT_ID = "ใส่_GOOGLE_CLIENT_ID";
-const SPREADSHEET_ID = "ใส่_SPREADSHEET_ID";
+const CLIENT_ID = "276182967058-pqbng8selgsuj6jn9i3lo804q8klun1d.apps.googleusercontent.com";
+const SPREADSHEET_ID = "1oRg3MtH5QB6pt5uFfmZjakI5kkJrAk9uTHTs";
 
 const SCOPE =
   "https://www.googleapis.com/auth/spreadsheets";
