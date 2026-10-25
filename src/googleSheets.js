@@ -1,6 +1,6 @@
 // Set these two values. Client ID is public; NEVER put a client secret here.
-export const CLIENT_ID='ใส่_GOOGLE_CLIENT_ID';
-export const SPREADSHEET_ID='ใส่_SPREADSHEET_ID';
+export const CLIENT_ID='276182967058-pqbng8selgsuj6jn9i3lo804q8klun1d.apps.googleusercontent.com';
+export const SPREADSHEET_ID='1oRg3MtH5QB6pt5uFfmZjakI5kkJrAk9uTHTs';
 const SCOPE='https://www.googleapis.com/auth/spreadsheets';
 const BASE=`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`;
 export const TABLES={Accounts:['id','name','opening','createdAt','updatedAt'],Transactions:['id','type','amount','category','accountId','toAccountId','date','note','createdAt','updatedAt'],Savings:['id','name','target','saved','createdAt','updatedAt'],Budgets:['id','category','limit','month','createdAt','updatedAt'],Bills:['id','name','amount','people','settled','createdAt','updatedAt'],Reconciliations:['id','accountId','actual','expected','date','createdAt','updatedAt']};
