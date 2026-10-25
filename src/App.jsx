@@ -7,7 +7,10 @@ import {
   isConnected
 } from "./googleSheets";
 
-import React, { useMemo, useState } from "react";
+
+import React, {
+  useMemo, useState, useEffect
+} from "react";
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
   PiggyBank, ChartPie, Users, Landmark,
