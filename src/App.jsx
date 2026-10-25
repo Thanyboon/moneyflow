@@ -1,3 +1,12 @@
+import {
+  connectGoogle,
+  disconnectGoogle,
+  readAllData,
+  addRecord,
+  deleteRecord,
+  isConnected
+} from "./googleSheets";
+
 import React, { useMemo, useState } from "react";
 import {
   LayoutDashboard, ArrowLeftRight, Wallet,
