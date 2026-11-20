@@ -1,69 +1,83 @@
+
 <!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#6846e8">
   <meta name="description" content="MONEYFLOW แอปวางแผนการเงินส่วนบุคคล">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="MONEYFLOW">
-  <link rel="manifest" href="./manifest.json">
+
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
+
   <title>MONEYFLOW — วางแผนการเงิน</title>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="MONEYFLOW หน้าหลัก">
-        <span class="brand-mark">฿</span>
-        <span><strong>MONEYFLOW</strong><small>จัดการเงินอย่างเข้าใจ</small></span>
-      </a>
-      <button id="themeBtn" class="icon-btn" aria-label="เปลี่ยนธีม">◐</button>
-    </header>
 
-    <main class="main">
-      <section class="welcome">
-        <div><p class="eyebrow">PERSONAL FINANCE</p><h1>ภาพรวมการเงิน</h1><p id="todayText" class="muted">จัดการเงินของคุณในที่เดียว</p></div>
-        <span class="welcome-icon">✦</span>
-      </section>
+<div class="app">
 
-      <section class="summary-grid" aria-label="สรุปการเงิน">
-        <article class="summary-card balance"><span>ยอดคงเหลือรวม</span><strong id="balance">฿0.00</strong><small>ยอดเริ่มต้น + รายรับ − รายจ่าย</small></article>
-        <article class="summary-card income"><span>รายรับเดือนนี้</span><strong id="income">฿0.00</strong><small>รายการรายรับ</small></article>
-        <article class="summary-card expense"><span>รายจ่ายเดือนนี้</span><strong id="expense">฿0.00</strong><small>รายการรายจ่าย</small></article>
-      </section>
+  <header class="topbar">
+    <button class="brand" data-page="dashboard">
+      <span class="logo">฿</span>
+      <span>
+        <b>MONEYFLOW</b>
+        <small>จัดการเงินอย่างเข้าใจ</small>
+      </span>
+    </button>
 
-      <section class="panel">
-        <div class="section-heading"><div><p class="eyebrow">QUICK ACTIONS</p><h2>ทำรายการ</h2></div></div>
-        <div class="actions">
-          <button class="action-btn" data-action="income"><span class="action-icon plus">＋</span><span>เพิ่มรายรับ</span></button>
-          <button class="action-btn" data-action="expense"><span class="action-icon minus">－</span><span>เพิ่มรายจ่าย</span></button>
-          <button class="action-btn" data-action="transfer"><span class="action-icon transfer">⇄</span><span>โอนเงิน</span></button>
-          <button class="action-btn" data-action="bill"><span class="action-icon group">♧</span><span>หารบิล</span></button>
-        </div>
-      </section>
+    <div class="top-actions">
+      <span id="syncState" class="sync">
+        <i></i> ยังไม่เชื่อมต่อ
+      </span>
+      <button id="themeBtn" class="round" aria-label="เปลี่ยนธีม">◐</button>
+    </div>
+  </header>
 
-      <section class="panel">
-        <div class="section-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>รายการล่าสุด</h2></div><span class="muted small">ข้อมูลตัวอย่างหน้าจอ</span></div>
-        <div id="transactions" class="empty-state"><span class="empty-icon">▤</span><strong>ยังไม่มีรายการ</strong><p>เมื่อเชื่อมต่อฐานข้อมูลแล้ว รายการของคุณจะแสดงที่นี่</p></div>
-      </section>
+  <div class="layout">
 
-      <section class="notice">
-        <span>ⓘ</span><p><strong>โหมดเตรียมระบบ</strong><br>ตอนนี้เป็นโครงสร้าง PWA เริ่มต้น ยังไม่ได้เชื่อมข้อมูลเงินจริงกับ Google Sheets</p>
-      </section>
+    <aside class="sidebar">
+      <div class="side-label">เมนูหลัก</div>
+
+      <button class="nav active" data-page="dashboard">▦ <span>ภาพรวม</span></button>
+      <button class="nav" data-page="transactions">↕ <span>รายรับ-รายจ่าย</span></button>
+      <button class="nav" data-page="wallets">▣ <span>บัญชี / กระเป๋าเงิน</span></button>
+      <button class="nav" data-page="goals">◎ <span>เป้าหมายการออม</span></button>
+      <button class="nav" data-page="budgets">▤ <span>งบประมาณ</span></button>
+      <button class="nav" data-page="reconcile">⌁ <span>ตรวจสอบยอดธนาคาร</span></button>
+      <button class="nav" data-page="bills">♧ <span>หารบิลกับเพื่อน</span></button>
+      <button class="nav" data-page="reports">▥ <span>รายงาน</span></button>
+      <button class="nav" data-page="settings">⚙ <span>ตั้งค่าและซิงค์</span></button>
+
+      <div class="side-foot">
+        MONEYFLOW
+        <span>Personal Finance</span>
+      </div>
+    </aside>
+
+    <main id="content" class="content" aria-live="polite">
+      <p>กำลังโหลด MONEYFLOW...</p>
     </main>
 
-    <nav class="bottom-nav" aria-label="เมนูหลัก">
-      <a class="active" href="#"><span>⌂</span>หน้าหลัก</a>
-      <a href="#" data-soon="ธุรกรรม"><span>▤</span>ธุรกรรม</a>
-      <a href="#" data-soon="ออมเงิน"><span>◎</span>ออมเงิน</a>
-      <a href="#" data-soon="รายงาน"><span>▥</span>รายงาน</a>
-      <a href="#" data-soon="ตั้งค่า"><span>⚙</span>ตั้งค่า</a>
-    </nav>
   </div>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="./app.js" defer></script>
+
+  <nav class="mobile-nav">
+    <button class="active" data-page="dashboard"><b>▦</b>หน้าหลัก</button>
+    <button data-page="transactions"><b>↕</b>รายการ</button>
+    <button data-page="goals"><b>◎</b>ออมเงิน</button>
+    <button data-page="bills"><b>♧</b>หารบิล</button>
+    <button data-page="settings"><b>⚙</b>ตั้งค่า</button>
+  </nav>
+
+</div>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast" role="status"></div>
+
+<script src="./app.js" defer></script>
+
 </body>
 </html>
