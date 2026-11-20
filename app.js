@@ -35,11 +35,12 @@ async function loadData(){
 }
 async function post(body){
  if(!state.key)throw new Error("กรุณาตั้งค่า API Key ในเมนูตั้งค่าก่อน");
- // Apps Script cross-origin POST: no-cors response is opaque.
- // After sending, the app re-reads Sheets to confirm visible state.
+ // Apps Script POST uses no-cors, so the browser cannot inspect the server response.
+ // Start the refresh in the background rather than blocking the save dialog.
+ setSync(false,"กำลังบันทึก...");
  await fetch(API_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({...body,key:state.key})});
- await new Promise(r=>setTimeout(r,1100));
- await loadData();
+ setSync(false,"กำลังอัปเดตข้อมูล...");
+ loadData().catch(err=>{setSync(false,"บันทึกแล้ว แต่ซิงค์ไม่สำเร็จ");toast("ส่งคำสั่งแล้ว แต่โหลดข้อมูลล่าสุดไม่สำเร็จ: "+err.message)});
 }
 function activeWallets(){return rows("Wallets").filter(w=>w.is_active===true||String(w.is_active)==="TRUE")}
 function activeCats(type){return rows("Categories").filter(c=>(c.is_active===true||String(c.is_active)==="TRUE")&&(!type||c.type===type))}
@@ -61,7 +62,8 @@ function empty(msg){return `<div class="empty"><b>${msg}</b>ข้อมูล�
 function render(){
  $$(".nav,.mobile-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page));
  const renderers={dashboard:dashboard,transactions:transactions,wallets:wallets,goals:goals,budgets:budgets,reconcile:reconcile,bills:bills,reports:reports,settings:settings};
- content.innerHTML=(renderers[state.page]||dashboard)();
+ try{content.innerHTML=(renderers[state.page]||dashboard)();}
+ catch(err){console.error("MONEYFLOW render error:",err);content.innerHTML=`<section class="card"><h2>ไม่สามารถแสดงหน้านี้ได้</h2><p class="sub">${esc(err?.message||"เกิดข้อผิดพลาดในการแสดงผล")}</p><p class="sub">ลองกด “ซิงค์ข้อมูลตอนนี้” ในเมนูตั้งค่า หากยังเกิดซ้ำให้แจ้งข้อความนี้เพื่อแก้ไข</p></section>`;}
 }
 function dashboard(){
  const t=monthTotals(), tx=rows("Transactions").filter(x=>!x.deleted_at&&x.type==="expense"&&String(x.date).startsWith(month()));
@@ -84,7 +86,17 @@ function transactions(){
 }
 function wallets(){return `${head("บัญชี / กระเป๋าเงิน","จัดการเงินสดและบัญชีธนาคาร",`<button class="btn" data-modal="wallet">＋ เพิ่มบัญชี</button>`)}<div class="grid stats">${stat("ยอดรวม",allBalance(),"ทุกกระเป๋า")}${stat("จำนวนบัญชี",activeWallets().length,"บัญชีที่ใช้งาน")}${stat("สกุลเงิน","THB","เงินบาท")}</div><div class="grid two-col">${activeWallets().map(w=>`<section class="card"><p class="eyebrow">${esc(w.wallet_type||"WALLET")}</p><h2 class="card-title">${esc(w.wallet_name)}</h2><div class="stat-value purple">${money(balanceFor(w.wallet_id))}</div><p class="sub">ยอดตั้งต้น ${money(w.opening_balance)}</p><button class="mini" data-edit-wallet="${esc(w.wallet_id)}">แก้ไขบัญชี</button></section>`).join("")||empty("ยังไม่มีบัญชี")}</div>`}
 function goals(){const list=rows("SavingsGoals").filter(g=>g.status!=="cancelled");return `${head("เป้าหมายการออม","ติดตามความคืบหน้าการเก็บเงิน",`<button class="btn" data-modal="goal">＋ สร้างเป้าหมาย</button>`)}<div class="grid two-col">${list.map(g=>{const p=Math.min(100,Math.max(0,Number(g.current_amount)/Math.max(1,Number(g.target_amount))*100));return `<section class="card goal"><div class="goal-top"><strong>${esc(g.goal_name)}</strong><span class="pill">${Math.round(p)}%</span></div><div class="progress"><span style="width:${p}%"></span></div><div class="goal-meta">${money(g.current_amount)} จาก ${money(g.target_amount)}</div><div class="actions"><button class="mini" data-goal-log="${esc(g.goal_id)}" data-kind="add">＋ เติมเงิน</button><button class="mini" data-goal-log="${esc(g.goal_id)}" data-kind="withdraw">ถอนเงิน</button></div></section>`}).join("")||empty("ยังไม่มีเป้าหมาย")}</div>`}
-function budgets(){const list=rows("Budgets").filter(b=>b.month===month());return `${head("งบประมาณรายเดือน","กำหนดวงเงินและติดตามค่าใช้จ่าย",`<button class="btn" data-modal="budget">＋ ตั้งงบประมาณ</button>`)}<div class="grid two-col">${list.map(b=>{const cat=rows("Categories").find(c=>c.category_id===b.category_id);const spent=rows("Transactions").filter(t=>!t.deleted_at&&t.type==="expense"&&t.category_id===b.category_id&&String(t.date).startsWith(month())&&(!b.wallet_id||b.wallet_id===t.wallet_id)).reduce((s,t)=>s+Number(t.amount),0);const p=Math.min(100,spent/Math.max(1,Number(b.budget_amount))*100);return `<section class="card goal"><strong>${esc(cat?.category_name||"หมวดหมู่")}</strong><div class="progress"><span style="width:${p}%;background:${p>=100?"#e45d7b":"linear-gradient(90deg,#8d75f4,#6040db)"}"></span></div><div class="goal-meta">ใช้ ${money(spent)} / ${money(b.budget_amount)} (${Math.round(p)}%)</div></section>`}).join("")||empty("ยังไม่มีงบประมาณเดือนนี้")}</div>`}
+function budgets(){
+ const raw=rows("Budgets");
+ const all=Array.isArray(raw)?raw:[];
+ const monthValue=b=>String(b.month??b.budget_month??b.period??b.year_month??"").slice(0,7);
+ const list=all.filter(b=>monthValue(b)===month());
+ const tx=Array.isArray(rows("Transactions"))?rows("Transactions"):[];
+ const categories=Array.isArray(rows("Categories"))?rows("Categories"):[];
+ return `${head("งบประมาณรายเดือน","กำหนดวงเงินและติดตามค่าใช้จ่าย",`<button class="btn" data-modal="budget">＋ ตั้งงบประมาณ</button>`)}
+ <div class="notice">เดือนที่แสดง: ${month()} · งบประมาณที่บันทึกทั้งหมด ${all.length} รายการ</div>
+ <div class="grid two-col">${list.map(b=>{const cat=categories.find(c=>c.category_id===b.category_id);const spent=tx.filter(t=>!t.deleted_at&&t.type==="expense"&&t.category_id===b.category_id&&String(t.date).startsWith(month())&&(!b.wallet_id||b.wallet_id===t.wallet_id)).reduce((s,t)=>s+Number(t.amount||0),0);const limit=Number(b.budget_amount??b.amount??0);const p=Math.min(100,spent/Math.max(1,limit)*100);return `<section class="card goal"><strong>${esc(cat?.category_name||b.category_name||"หมวดหมู่")}</strong><div class="progress"><span style="width:${p}%;background:${p>=100?"#e45d7b":"linear-gradient(90deg,#8d75f4,#6040db)"}"></span></div><div class="goal-meta">ใช้ ${money(spent)} / ${money(limit)} (${Math.round(p)}%)</div></section>`}).join("")||empty("ยังไม่มีงบประมาณเดือนนี้")}</div>`;
+}
 function reconcile(){return `${head("ตรวจสอบยอดธนาคาร","เปรียบเทียบยอดที่ระบบคำนวณกับยอดเงินจริง",`<button class="btn" data-modal="reconcile">＋ ตรวจสอบยอด</button>`)}<div class="notice">ระบบคำนวณยอดจากยอดตั้งต้นและธุรกรรมที่บันทึกไว้จนถึงวันที่ตรวจสอบ กรุณาบันทึกรายการให้ครบก่อนเปรียบเทียบ</div><section class="card"><h2 class="card-title">ประวัติการตรวจสอบ</h2>${rows("Reconciliations").length?`<div class="table-wrap"><table class="table"><thead><tr><th>วันที่</th><th>บัญชี</th><th>ยอดในระบบ</th><th>ยอดธนาคาร</th><th>ส่วนต่าง</th></tr></thead><tbody>${rows("Reconciliations").slice().reverse().map(r=>`<tr><td>${esc(r.check_date)}</td><td>${esc(activeWallets().find(w=>w.wallet_id===r.wallet_id)?.wallet_name||"-")}</td><td>${money(r.system_balance)}</td><td>${money(r.bank_balance)}</td><td class="${Number(r.difference)===0?"green":"red"}">${money(r.difference)}</td></tr>`).join("")}</tbody></table></div>`:empty("ยังไม่มีประวัติการตรวจสอบ")}</section>`}
 function bills(){return `${head("หารบิลกับเพื่อน","บันทึกค่าใช้จ่ายร่วมและยอดที่แต่ละคนต้องจ่าย",`<button class="btn" data-modal="bill">＋ สร้างบิล</button>`)}<div class="grid two-col">${rows("Bills").slice().reverse().map(b=>{const people=rows("BillParticipants").filter(p=>p.bill_id===b.bill_id);return `<section class="card"><div class="goal-top"><strong>${esc(b.bill_name)}</strong><span class="pill">${esc(b.status||"open")}</span></div><div class="stat-value purple">${money(b.total_amount)}</div><p class="sub">วันที่ ${esc(b.bill_date)} · ผู้จ่าย ${esc(b.paid_by_name||"-")}</p>${people.map(p=>`<div class="list-row"><span>${esc(p.person_name)} <small class="goal-meta">${esc(p.status)}</small></span><b>${money(p.amount_owed)}</b></div>`).join("")}</section>`}).join("")||empty("ยังไม่มีบิล")}</div>`}
 function reports(){const t=monthTotals(),all=rows("Transactions").filter(x=>!x.deleted_at);return `${head("รายงานการเงิน","สรุปข้อมูลจากธุรกรรมที่บันทึกไว้") }<div class="grid stats">${stat("รายรับเดือนนี้",t.income,"THB","green")}${stat("รายจ่ายเดือนนี้",t.expense,"THB","red")}${stat("สุทธิเดือนนี้",t.income-t.expense,"รายรับลบรายจ่าย",(t.income-t.expense)>=0?"green":"red")}</div><section class="card"><h2 class="card-title">สรุปตามเดือน</h2>${empty(`มีธุรกรรมทั้งหมด ${all.length} รายการ`)}</section>`}
@@ -113,7 +125,12 @@ function openForm(kind,record={}){
   modal("สร้างบิลหารกับเพื่อน",`${field("ชื่อบิล","bill_name")}${field("วันที่","bill_date","date",today())}${field("ยอดรวมบิล","total_amount","number","","min=0.01 step=0.01")}${field("ชื่อผู้จ่ายก่อน","paid_by_name")}${selectField("บัญชีที่ใช้จ่าย","paid_by_wallet_id",wallets.map(w=>({value:w.wallet_id,label:w.wallet_name})),wallets[0]?.wallet_id||"")}${field("หมายเหตุ","note")}`);
  }
  $("#modalForm").onsubmit=async e=>{
-  e.preventDefault();const fd=new FormData(e.currentTarget),data=Object.fromEntries(fd.entries());
+  e.preventDefault();
+  const form=e.currentTarget,submit=form.querySelector('button[type="submit"]');
+  if(state.busy)return;
+  state.busy=true;
+  if(submit){submit.disabled=true;submit.textContent="กำลังบันทึก...";}
+  const fd=new FormData(form),data=Object.fromEntries(fd.entries());
   Object.keys(data).forEach(k=>{if(["amount","opening_balance","target_amount","current_amount","budget_amount","bank_balance","total_amount"].includes(k))data[k]=Number(data[k])});
   try{
    if(kind==="transaction"){
@@ -131,8 +148,11 @@ function openForm(kind,record={}){
    else if(kind==="bill"){
     data.status="open";await post({action:"create",entity:"Bills",data});
    }
-   closeModal();toast("ส่งคำสั่งแล้ว และซิงค์ข้อมูลล่าสุดเรียบร้อย");
-  }catch(err){toast(err.message)}
+   closeModal();toast("ส่งคำสั่งบันทึกแล้ว กำลังอัปเดตข้อมูล");
+  }catch(err){
+   toast(err.message);
+   if(submit){submit.disabled=false;submit.textContent="บันทึก";}
+  }finally{state.busy=false}
  };
 }
 document.addEventListener("click",async e=>{
